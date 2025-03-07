@@ -1,0 +1,95 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Estilos base */
+html {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  color: #111827;
+  background-color: #ebebeb;
+  font-family: 'Proxima Nova', 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+#root {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Componentes */
+@layer components {
+  .btn-primary {
+    @apply bg-primary-main text-white px-4 py-2 rounded-lg hover:bg-primary-dark transition-colors duration-200 cursor-pointer font-medium;
+  }
+  
+  .btn-secondary {
+    @apply bg-white text-secondary-main border border-secondary-main px-4 py-2 rounded-lg hover:bg-purple-50 transition-colors duration-200 cursor-pointer font-medium;
+  }
+  
+  .input-field {
+    @apply w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-secondary-main focus:border-transparent;
+  }
+
+  .property-card {
+    @apply bg-white rounded-lg shadow-sm hover:shadow-md transition-all duration-200;
+  }
+
+  .property-image {
+    @apply w-full h-48 object-cover rounded-t-lg;
+  }
+
+  .property-content {
+    @apply p-4 flex flex-col h-full;
+  }
+
+  .property-title {
+    @apply text-lg font-semibold text-gray-800 mb-2;
+  }
+
+  .property-price {
+    @apply text-xl font-bold text-primary-main mb-2;
+  }
+
+  .property-description {
+    @apply text-gray-600 text-sm mb-4 flex-grow overflow-hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+  }
+
+  .property-amenities {
+    @apply flex flex-wrap gap-2 mb-4;
+  }
+
+  .amenity-chip {
+    @apply bg-purple-50 text-secondary-main px-2 py-1 rounded-full text-xs;
+  }
+
+  .page-container {
+    @apply min-h-screen flex-1 bg-background-default;
+  }
+
+  .main-content {
+    @apply container mx-auto py-6 px-4 sm:px-6 lg:px-8;
+  }
+
+  .filter-chip {
+    @apply transition-colors duration-200;
+  }
+
+  .filter-chip.selected {
+    @apply bg-secondary-main text-white;
+  }
+
+  .filter-chip:not(.selected) {
+    @apply bg-white text-secondary-main hover:bg-purple-50;
+  }
+}
