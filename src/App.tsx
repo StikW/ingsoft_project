@@ -5,6 +5,7 @@ import { Home } from './pages/Home';
 import { Login } from './pages/Login';
 import { Register } from './pages/Register';
 import { Search } from './pages/Search';
+import { PropertyDetails } from './pages/PropertyDetails';
 import { useStore } from './store/useStore';
 import { theme } from './theme';
 
@@ -35,6 +36,7 @@ function App() {
           <main className="flex-1">
             <Routes>
               <Route path="/" element={<Home />} />
+              <Route path="/property/:id" element={<PropertyDetails />} />
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
               <Route path="/search" element={<Search />} />

@@ -68,7 +68,10 @@ export const PropertyCard = ({ property }: PropertyCardProps) => {
 
   return (
     <>
-      <Card className="h-full flex flex-col transition-transform duration-300 hover:scale-[1.02] hover:shadow-lg">
+      <Card 
+        className="h-full flex flex-col transition-transform duration-300 hover:scale-[1.02] hover:shadow-lg cursor-pointer"
+        onClick={() => navigate(`/property/${property.id}`)}
+      >
         <Box className="relative">
           <CardMedia
             component="img"
