@@ -1,205 +1,230 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Card,
   CardContent,
   CardMedia,
   Typography,
-  Button,
+  IconButton,
   Box,
   Chip,
-  Stack,
+  CardActionArea,
   Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  IconButton,
-  CardActions,
-  Tooltip,
+  useTheme,
 } from '@mui/material';
 import {
-  Favorite,
-  FavoriteBorder,
+  Favorite as FavoriteIcon,
+  FavoriteBorder as FavoriteBorderIcon,
   LocationOn,
   Home,
-  MeetingRoom,
-  Apartment,
+  Bed,
+  Bathtub,
+  SquareFoot,
 } from '@mui/icons-material';
-import { Property } from '../data/mockData';
-import { useNavigate } from 'react-router-dom';
+import { Property } from '../types';
+import { useAuth } from '../contexts/AuthContext';
+import { useFavorites } from '../contexts/FavoritesContext';
+import { LoginDialog } from './LoginDialog';
 
 interface PropertyCardProps {
   property: Property;
 }
 
-const PropertyTypeIcon = ({ type }: { type: Property['type'] }) => {
-  switch (type) {
-    case 'apartment':
-      return <Apartment />;
-    case 'house':
-      return <Home />;
-    case 'room':
-      return <MeetingRoom />;
-    default:
-      return <Home />;
-  }
-};
-
-export const PropertyCard = ({ property }: PropertyCardProps) => {
+export const PropertyCard: React.FC<PropertyCardProps> = ({
+  property,
+}) => {
   const navigate = useNavigate();
-  const [loginDialog, setLoginDialog] = useState(false);
-  const [isFavorite, setIsFavorite] = useState(false);
+  const theme = useTheme();
+  const { isAuthenticated } = useAuth();
+  const { isPropertyFavorite, toggleFavorite } = useFavorites();
+  const [isLoginDialogOpen, setIsLoginDialogOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat('es-CO', {
-      style: 'currency',
-      currency: 'COP',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(price);
+  const isFavorite = isPropertyFavorite(property.id);
+
+  const handleFavoriteClick = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    
+    if (!isAuthenticated) {
+      setIsLoginDialogOpen(true);
+      return;
+    }
+
+    if (isLoading) return;
+
+    setIsLoading(true);
+    try {
+      await toggleFavorite(property.id);
+    } catch (error) {
+      console.error('Error toggling favorite:', error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleContactClick = () => {
-    setLoginDialog(true);
+  const handleCardClick = () => {
+    navigate(`/property/${property.id}`);
   };
 
-  const handleFavoriteClick = () => {
-    setIsFavorite(!isFavorite);
+  const handleLoginDialogClose = () => {
+    setIsLoginDialogOpen(false);
   };
 
   return (
     <>
       <Card 
-        className="h-full flex flex-col transition-transform duration-300 hover:scale-[1.02] hover:shadow-lg cursor-pointer"
-        onClick={() => navigate(`/property/${property.id}`)}
+        sx={{ 
+          display: 'flex',
+          flexDirection: 'column',
+          cursor: 'pointer',
+          transition: 'transform 0.2s',
+          '&:hover': {
+            transform: 'translateY(-4px)',
+            boxShadow: 3,
+          },
+          maxWidth: '100%',
+          height: '440px',
+          borderRadius: '8px',
+          overflow: 'hidden',
+        }}
+        onClick={handleCardClick}
       >
-        <Box className="relative">
-          <CardMedia
-            component="img"
-            height="200"
-            image={property.imageUrl}
-            alt={property.title}
-            className="h-48 object-cover"
-          />
-          <Box className="absolute top-2 right-2 z-10">
-            <Tooltip title={isFavorite ? "Quitar de favoritos" : "Agregar a favoritos"}>
-              <IconButton 
-                size="small" 
-                onClick={handleFavoriteClick}
-                className="bg-white/90 hover:bg-white rounded-full shadow-sm"
-              >
-                {isFavorite ? <Favorite className="text-red-500" /> : <FavoriteBorder />}
-              </IconButton>
-            </Tooltip>
+        <CardActionArea sx={{ flexGrow: 1 }}>
+          <Box sx={{ 
+            position: 'relative', 
+            height: '200px',
+            width: '100%',
+            overflow: 'hidden',
+            backgroundColor: '#f5f5f5',
+          }}>
+            <CardMedia
+              component="img"
+              image={property.images[0] || 'https://via.placeholder.com/300x200'}
+              alt={property.title}
+              sx={{ 
+                objectFit: 'cover',
+                width: '100%',
+                height: '100%',
+                display: 'block',
+                position: 'absolute',
+                top: '50%',
+                left: '50%',
+                transform: 'translate(-50%, -50%)',
+              }}
+            />
           </Box>
-        </Box>
 
-        <CardContent className="flex-grow">
-          <Stack spacing={2}>
-            <Box>
-              <Typography variant="h6" className="font-semibold line-clamp-2">
-                {property.title}
-              </Typography>
-              <Typography 
-                variant="body2" 
-                color="text.secondary"
-                className="flex items-center gap-1 mt-1"
-              >
-                <LocationOn fontSize="small" />
+          <CardContent sx={{ p: 2.5, flexGrow: 1 }}>
+            <Typography variant="h6" component="h2" sx={{ 
+              fontSize: '1.1rem',
+              fontWeight: 600,
+              mb: 1.5,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap'
+            }}>
+              {property.title}
+            </Typography>
+            
+            <Box sx={{ display: 'flex', alignItems: 'center', mb: 1.5 }}>
+              <LocationOn sx={{ fontSize: 16, mr: 0.5, color: 'text.secondary' }} />
+              <Typography variant="body2" color="text.secondary" sx={{
+                fontSize: '0.875rem',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap'
+              }}>
                 {property.location}
               </Typography>
             </Box>
-            
-            <Typography variant="h5" className="font-bold text-primary-main">
-              {formatPrice(property.price)}
+
+            <Typography variant="h6" color="primary" sx={{ 
+              mb: 2.5,
+              fontSize: '1.25rem',
+              fontWeight: 600
+            }}>
+              ${property.price.toLocaleString()}
             </Typography>
 
-            <Stack direction="row" spacing={1} flexWrap="wrap" gap={1}>
-              <Chip 
-                icon={<PropertyTypeIcon type={property.type} />}
-                label={property.type === 'apartment' ? 'Apartamento' : 
-                       property.type === 'house' ? 'Casa' : 'Habitación'}
-                color="primary"
+            <Box sx={{ 
+              display: 'flex', 
+              flexWrap: 'wrap', 
+              gap: 1,
+              mb: 2.5,
+              '& .MuiChip-root': {
+                height: '28px',
+                '& .MuiChip-icon': {
+                  fontSize: '16px'
+                },
+                '& .MuiChip-label': {
+                  fontSize: '0.813rem',
+                  padding: '0 8px'
+                }
+              }
+            }}>
+              <Chip
+                size="small"
+                icon={<Home />}
+                label={property.type}
                 variant="outlined"
-                size="small"
               />
-              <Chip 
-                label={`${property.bedrooms} hab.`}
+              <Chip
                 size="small"
-                className="bg-gray-100"
+                icon={<Bed />}
+                label={`${property.bedrooms} hab`}
+                variant="outlined"
               />
-              <Chip 
+              <Chip
+                size="small"
+                icon={<Bathtub />}
                 label={`${property.bathrooms} baños`}
-                size="small"
-                className="bg-gray-100"
+                variant="outlined"
               />
-              <Chip 
+              <Chip
+                size="small"
+                icon={<SquareFoot />}
                 label={`${property.area} m²`}
-                size="small"
-                className="bg-gray-100"
+                variant="outlined"
               />
-            </Stack>
-
-            <Box>
-              <Typography variant="body2" className="line-clamp-2 text-gray-600">
-                {property.description}
-              </Typography>
             </Box>
 
-            <div className="flex flex-wrap gap-2">
-              {property.amenities.map((amenity, index) => (
-                <span 
-                  key={index}
-                  className="text-xs px-2 py-1 bg-primary-main text-gray-50 rounded-full"
-                >
-                  {amenity}
-                </span>
-              ))}
-            </div>
-          </Stack>
-        </CardContent>
-
-        <CardActions className="p-4 pt-0">
-          <Button
-            fullWidth
-            variant="contained"
-            color="primary"
-            onClick={handleContactClick}
-            className="bg-primary-main hover:bg-primary-dark text-white py-2 rounded-full"
-          >
-            Contactar Propietario
-          </Button>
-        </CardActions>
+            <Chip
+              size="small"
+              label={property.isAvailable ? 'Disponible' : 'No disponible'}
+              color={property.isAvailable ? 'success' : 'error'}
+              variant="outlined"
+              sx={{
+                height: '28px',
+                '& .MuiChip-label': {
+                  fontSize: '0.813rem'
+                }
+              }}
+            />
+          </CardContent>
+        </CardActionArea>
+        <IconButton
+          onClick={handleFavoriteClick}
+          sx={{
+            position: 'absolute',
+            top: 8,
+            right: 8,
+            backgroundColor: 'rgba(255, 255, 255, 0.8)',
+            '&:hover': {
+              backgroundColor: 'rgba(255, 255, 255, 0.9)',
+            },
+            color: isFavorite ? theme.palette.error.main : undefined,
+          }}
+          disabled={isLoading}
+        >
+          {isFavorite ? <FavoriteIcon /> : <FavoriteBorderIcon />}
+        </IconButton>
       </Card>
 
-      <Dialog
-        open={loginDialog}
-        onClose={() => setLoginDialog(false)}
-        className="rounded-lg"
-      >
-        <DialogTitle className="pb-1">
-          Iniciar Sesión Requerido
-        </DialogTitle>
-        <DialogContent>
-          <Typography color="text.secondary">
-            Para contactar al propietario, necesitas iniciar sesión o registrarte en la plataforma.
-          </Typography>
-        </DialogContent>
-        <DialogActions className="p-4">
-          <Button 
-            onClick={() => setLoginDialog(false)}
-            className="text-gray-600 hover:bg-gray-100"
-          >
-            Cancelar
-          </Button>
-          <Button 
-            onClick={() => navigate('/login')} 
-            variant="contained"
-            className="bg-primary-main hover:bg-primary-dark"
-          >
-            Iniciar Sesión
-          </Button>
-        </DialogActions>
-      </Dialog>
+      <LoginDialog
+        open={isLoginDialogOpen}
+        onClose={handleLoginDialogClose}
+        message="Debes iniciar sesión para guardar propiedades en favoritos"
+      />
     </>
   );
 }; 

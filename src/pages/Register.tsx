@@ -11,14 +11,15 @@ import {
   Select,
   MenuItem,
   Box,
+  SelectChangeEvent,
 } from '@mui/material';
-import { useStore } from '../store/useStore';
 import { UserRole } from '../types';
 import { mockService } from '../services/mockService';
+import { useAuth } from '../contexts/AuthContext';
 
 export const Register = () => {
   const navigate = useNavigate();
-  const setUser = useStore((state) => state.setUser);
+  const { login } = useAuth();
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -30,11 +31,18 @@ export const Register = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | { name?: string; value: unknown }>) => {
+  const handleTextChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({
       ...prev,
-      [name as string]: value,
+      [name]: value,
+    }));
+  };
+
+  const handleRoleChange = (e: SelectChangeEvent) => {
+    setFormData((prev) => ({
+      ...prev,
+      role: e.target.value as UserRole,
     }));
   };
 
@@ -51,8 +59,19 @@ export const Register = () => {
 
     try {
       const { confirmPassword, ...userData } = formData;
-      const newUser = await mockService.register(userData);
-      setUser(newUser);
+      // TODO: Implementar la lógica real de registro
+      // Por ahora, simulamos un registro exitoso
+      const newUser = {
+        id: Math.random().toString(36).substr(2, 9),
+        name: userData.name,
+        email: userData.email,
+        role: userData.role,
+        phone: userData.phone || '',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+      
+      login(newUser);
       navigate(newUser.role === 'owner' ? '/owner-dashboard' : '/search');
     } catch (err) {
       setError('Error al registrar usuario');
@@ -74,7 +93,7 @@ export const Register = () => {
             label="Nombre"
             name="name"
             value={formData.name}
-            onChange={handleChange}
+            onChange={handleTextChange}
             margin="normal"
             required
             disabled={loading}
@@ -86,7 +105,7 @@ export const Register = () => {
             name="email"
             type="email"
             value={formData.email}
-            onChange={handleChange}
+            onChange={handleTextChange}
             margin="normal"
             required
             disabled={loading}
@@ -98,7 +117,7 @@ export const Register = () => {
             name="password"
             type="password"
             value={formData.password}
-            onChange={handleChange}
+            onChange={handleTextChange}
             margin="normal"
             required
             disabled={loading}
@@ -110,7 +129,7 @@ export const Register = () => {
             name="confirmPassword"
             type="password"
             value={formData.confirmPassword}
-            onChange={handleChange}
+            onChange={handleTextChange}
             margin="normal"
             required
             disabled={loading}
@@ -121,7 +140,7 @@ export const Register = () => {
             <Select
               name="role"
               value={formData.role}
-              onChange={handleChange}
+              onChange={handleRoleChange}
               label="Tipo de Usuario"
               required
               disabled={loading}
@@ -136,7 +155,7 @@ export const Register = () => {
             label="Teléfono"
             name="phone"
             value={formData.phone}
-            onChange={handleChange}
+            onChange={handleTextChange}
             margin="normal"
             disabled={loading}
           />

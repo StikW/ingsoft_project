@@ -1,69 +1,179 @@
-import { Link } from 'react-router-dom';
+import { useState } from 'react';
+import { useNavigate, Link as RouterLink } from 'react-router-dom';
 import {
-  KeyboardArrowDown as ArrowDownIcon,
+  AppBar,
+  Toolbar,
+  Typography,
+  Button,
+  IconButton,
+  Menu,
+  MenuItem,
+  Box,
+  useTheme,
+  useMediaQuery,
+} from '@mui/material';
+import {
   Menu as MenuIcon,
+  Search as SearchIcon,
+  Home as HomeIcon,
+  Person as PersonIcon,
+  Dashboard as DashboardIcon,
 } from '@mui/icons-material';
+import { useAuth } from '../contexts/AuthContext';
 
 export const Header = () => {
+  const navigate = useNavigate();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const { user, logout: authLogout } = useAuth();
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+
+  const handleMenu = (event: React.MouseEvent<HTMLElement>) => {
+    setAnchorEl(event.currentTarget);
+  };
+
+  const handleClose = () => {
+    setAnchorEl(null);
+  };
+
+  const handleLogout = () => {
+    authLogout();
+    handleClose();
+    navigate('/');
+  };
+
+  const handleProfile = () => {
+    handleClose();
+    navigate('/profile');
+  };
+
+  const handleDashboard = () => {
+    handleClose();
+    navigate('/owner-dashboard');
+  };
+
   return (
-    <header className="bg-white border-b border-gray-100">
-      <div className="container mx-auto px-4">
-        {/* Barra Principal */}
-        <div className="h-16 flex items-center justify-between">
-          {/* Título */}
-          <Link to="/" className="text-xl font-bold text-primary-main hover:text-primary-dark transition-colors">
-            RentHub
-          </Link>
+    <AppBar position="static" color="default" elevation={1}>
+      <Toolbar>
+        <IconButton
+          edge="start"
+          color="inherit"
+          aria-label="menu"
+          sx={{ mr: 2, display: { sm: 'none' } }}
+          onClick={() => setAnchorEl(document.body)}
+        >
+          <MenuIcon />
+        </IconButton>
 
-          {/* Navegación Principal */}
-          <nav className="hidden md:flex items-center space-x-6">
-            <Link to="/map" className="text-gray-600 hover:text-gray-900 text-sm font-medium">
-              Explorar Mapa
-            </Link>
-            <div className="relative group">
-              <button className="flex items-center space-x-1 text-gray-600 hover:text-gray-900 text-sm font-medium">
-                <span>Propiedades</span>
-                <ArrowDownIcon className="w-4 h-4" />
-              </button>
-              <div className="absolute top-full left-0 mt-1 w-48 bg-white rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
-                <div className="py-1">
-                  <Link to="/search?type=apartment" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
-                    Apartamentos
-                  </Link>
-                  <Link to="/search?type=house" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
-                    Casas
-                  </Link>
-                  <Link to="/search?type=room" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
-                    Habitaciones
-                  </Link>
-                </div>
-              </div>
-            </div>
-            <Link to="/verified" className="text-gray-600 hover:text-gray-900 text-sm font-medium">
-              Verificados
-            </Link>
-          </nav>
+        <Typography
+          variant="h6"
+          component={RouterLink}
+          to="/"
+          sx={{
+            flexGrow: 1,
+            textDecoration: 'none',
+            color: 'inherit',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 1,
+          }}
+        >
+          <HomeIcon />
+          Inmobiliaria
+        </Typography>
 
-          {/* Acciones */}
-          <div className="flex items-center space-x-4">
-            <Link 
-              to="/login" 
-              className="text-gray-600 hover:text-gray-900 text-sm font-medium"
+        {!isMobile && (
+          <Box sx={{ display: 'flex', gap: 2 }}>
+            <Button
+              color="inherit"
+              startIcon={<SearchIcon />}
+              onClick={() => navigate('/search')}
             >
-              Iniciar Sesión
-            </Link>
-            <Link 
-              to="/register" 
-              className="bg-primary-main text-white px-4 py-2 rounded-full text-sm font-medium hover:bg-primary-dark transition-colors"
+              Buscar
+            </Button>
+            {user ? (
+              <>
+                {user.role === 'owner' && (
+                  <Button
+                    color="inherit"
+                    startIcon={<DashboardIcon />}
+                    onClick={handleDashboard}
+                  >
+                    Panel de Control
+                  </Button>
+                )}
+                <Button
+                  color="inherit"
+                  startIcon={<PersonIcon />}
+                  onClick={handleProfile}
+                >
+                  Mi Perfil
+                </Button>
+                <Button color="inherit" onClick={handleLogout}>
+                  Cerrar Sesión
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button color="inherit" onClick={() => navigate('/login')}>
+                  Iniciar Sesión
+                </Button>
+                <Button
+                  variant="contained"
+                  color="primary"
+                  onClick={() => navigate('/register')}
+                >
+                  Registrarse
+                </Button>
+              </>
+            )}
+          </Box>
+        )}
+
+        {isMobile && (
+          <>
+            <IconButton
+              color="inherit"
+              onClick={handleMenu}
+              sx={{ ml: 2 }}
             >
-              Registrarse
-            </Link>
-            <button className="md:hidden text-gray-600">
-              <MenuIcon className="w-6 h-6" />
-            </button>
-          </div>
-        </div>
-      </div>
-    </header>
+              <PersonIcon />
+            </IconButton>
+            <Menu
+              anchorEl={anchorEl}
+              open={Boolean(anchorEl)}
+              onClose={handleClose}
+            >
+              {user ? (
+                <>
+                  {user.role === 'owner' && (
+                    <MenuItem onClick={handleDashboard}>
+                      <DashboardIcon sx={{ mr: 1 }} />
+                      Panel de Control
+                    </MenuItem>
+                  )}
+                  <MenuItem onClick={handleProfile}>
+                    <PersonIcon sx={{ mr: 1 }} />
+                    Mi Perfil
+                  </MenuItem>
+                  <MenuItem onClick={handleLogout}>
+                    Cerrar Sesión
+                  </MenuItem>
+                </>
+              ) : (
+                <>
+                  <MenuItem onClick={() => navigate('/login')}>
+                    Iniciar Sesión
+                  </MenuItem>
+                  <MenuItem onClick={() => navigate('/register')}>
+                    Registrarse
+                  </MenuItem>
+                </>
+              )}
+            </Menu>
+          </>
+        )}
+      </Toolbar>
+    </AppBar>
   );
 };

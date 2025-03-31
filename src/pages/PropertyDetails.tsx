@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   Container,
@@ -11,6 +11,7 @@ import {
   CardContent,
   IconButton,
   Skeleton,
+  Dialog,
 } from '@mui/material';
 import {
   LocationOn,
@@ -21,11 +22,19 @@ import {
   BathtubOutlined,
   BedroomParentOutlined,
   SquareFootOutlined,
+  Favorite,
+  FavoriteBorder,
+  Chat as ChatIcon,
 } from '@mui/icons-material';
 import { mockService } from '../services/mockService';
-import { Property } from '../data/mockData';
+import { Property, PropertyType } from '../types';
+import { Chat } from '../components/Chat';
+import { ReviewSection } from '../components/ReviewSection';
+import { ImageGallery } from '../components/ImageGallery';
+import { AuthRequiredDialog } from '../components/AuthRequiredDialog';
+import { useAuth } from '../contexts/AuthContext';
 
-const PropertyTypeIcon = ({ type }: { type: Property['type'] }) => {
+const PropertyTypeIcon = ({ type }: { type: PropertyType }) => {
   switch (type) {
     case 'apartment':
       return <Apartment />;
@@ -38,194 +47,200 @@ const PropertyTypeIcon = ({ type }: { type: Property['type'] }) => {
   }
 };
 
-export const PropertyDetails = () => {
-  const { id } = useParams();
+const PropertyDetails = () => {
+  const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [property, setProperty] = useState<Property | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isFavorite, setIsFavorite] = useState(false);
+  const [chatOpen, setChatOpen] = useState(false);
+  const { isAuthenticated, user } = useAuth();
+  const [authDialogOpen, setAuthDialogOpen] = useState(false);
+  const currentUserId = user?.id || '';
 
   useEffect(() => {
-    const loadProperty = async () => {
-      if (id) {
-        const data = await mockService.getPropertyById(id);
+    const fetchProperty = async () => {
+      try {
+        const data = await mockService.getPropertyById(id || '');
         setProperty(data);
+        if (currentUserId && id) {
+          const userFavorites = await mockService.getUserFavorites(currentUserId);
+          setIsFavorite(userFavorites.some(prop => prop.id === id));
+        }
+      } catch (error) {
+        console.error('Error fetching property:', error);
+      } finally {
         setLoading(false);
       }
     };
-    loadProperty();
-  }, [id]);
 
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat('es-CO', {
-      style: 'currency',
-      currency: 'COP',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(price);
+    fetchProperty();
+  }, [id, currentUserId]);
+
+  const handleFavoriteToggle = async () => {
+    if (!isAuthenticated) {
+      setAuthDialogOpen(true);
+      return;
+    }
+
+    if (!id || !currentUserId) return;
+    
+    try {
+      if (isFavorite) {
+        await mockService.removeFavorite(currentUserId, id);
+      } else {
+        await mockService.addFavorite(currentUserId, id);
+      }
+      setIsFavorite(!isFavorite);
+    } catch (error) {
+      console.error('Error toggling favorite:', error);
+    }
+  };
+
+  const handleContactOwner = () => {
+    if (!isAuthenticated) {
+      setAuthDialogOpen(true);
+      return;
+    }
+    setChatOpen(true);
   };
 
   if (loading) {
     return (
-      <Container maxWidth="lg" className="py-8">
-        <Box className="animate-pulse">
-          <Skeleton variant="rectangular" height={400} />
-          <Box className="mt-4">
-            <Skeleton variant="text" height={40} width="60%" />
-            <Skeleton variant="text" height={24} width="40%" />
-            <Skeleton variant="text" height={32} width="30%" />
-          </Box>
-        </Box>
+      <Container maxWidth="lg" sx={{ mt: 4 }}>
+        <Skeleton variant="rectangular" height={400} />
+        <Grid container spacing={2} sx={{ mt: 2 }}>
+          <Grid item xs={12} md={8}>
+            <Skeleton variant="text" height={40} />
+            <Skeleton variant="text" height={20} />
+          </Grid>
+          <Grid item xs={12} md={4}>
+            <Skeleton variant="rectangular" height={200} />
+          </Grid>
+        </Grid>
       </Container>
     );
   }
 
   if (!property) {
     return (
-      <Container maxWidth="lg" className="py-8">
-        <Typography variant="h5" className="text-center text-gray-600">
-          Propiedad no encontrada
-        </Typography>
-        <Box className="text-center mt-4">
-          <Button
-            onClick={() => navigate(-1)}
-            startIcon={<ArrowBack />}
-            variant="contained"
-          >
-            Volver
-          </Button>
-        </Box>
+      <Container maxWidth="lg" sx={{ mt: 4 }}>
+        <Typography variant="h5">Propiedad no encontrada</Typography>
       </Container>
     );
   }
 
   return (
-    <Container maxWidth="lg" className="py-8">
-      {/* Botón Volver */}
-      <IconButton
-        onClick={() => navigate(-1)}
-        className="mb-4 hover:bg-gray-100"
-        size="large"
-      >
-        <ArrowBack />
-      </IconButton>
+    <Container maxWidth="lg" sx={{ mt: 4 }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+        <IconButton onClick={() => navigate(-1)} sx={{ mr: 2 }}>
+          <ArrowBack />
+        </IconButton>
+        <IconButton onClick={handleFavoriteToggle} color={isFavorite ? 'error' : 'default'}>
+          {isFavorite ? <Favorite /> : <FavoriteBorder />}
+        </IconButton>
+      </Box>
 
-      <Grid container spacing={4}>
-        {/* Imagen Principal */}
+      <Grid container spacing={3}>
         <Grid item xs={12}>
-          <Box className="relative h-[400px] rounded-lg overflow-hidden">
+          <Box sx={{ height: 400, overflow: 'hidden', borderRadius: 1 }}>
             <img
-              src={property.imageUrl}
+              src={property.images[0]}
               alt={property.title}
-              className="w-full h-full object-cover"
+              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
             />
           </Box>
         </Grid>
 
-        {/* Información Principal */}
         <Grid item xs={12} md={8}>
-          <Box>
-            <Typography variant="h4" className="font-bold mb-2">
-              {property.title}
-            </Typography>
-            
-            <Typography 
-              variant="h5" 
-              className="text-primary-main font-bold mb-4"
-            >
-              {formatPrice(property.price)}
-            </Typography>
-
-            <Box className="flex items-center gap-2 mb-6">
-              <LocationOn className="text-gray-500" />
-              <Typography variant="subtitle1" className="text-gray-600">
-                {property.location}
-              </Typography>
-            </Box>
-
-            {/* Características Principales */}
-            <Grid container spacing={3} className="mb-6">
-              <Grid item xs={4}>
-                <Card className="text-center h-full">
-                  <CardContent>
-                    <BedroomParentOutlined className="text-primary-main mb-2" />
-                    <Typography variant="h6">{property.bedrooms}</Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      Habitaciones
-                    </Typography>
-                  </CardContent>
-                </Card>
-              </Grid>
-              <Grid item xs={4}>
-                <Card className="text-center h-full">
-                  <CardContent>
-                    <BathtubOutlined className="text-primary-main mb-2" />
-                    <Typography variant="h6">{property.bathrooms}</Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      Baños
-                    </Typography>
-                  </CardContent>
-                </Card>
-              </Grid>
-              <Grid item xs={4}>
-                <Card className="text-center h-full">
-                  <CardContent>
-                    <SquareFootOutlined className="text-primary-main mb-2" />
-                    <Typography variant="h6">{property.area}</Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      m² Área
-                    </Typography>
-                  </CardContent>
-                </Card>
-              </Grid>
-            </Grid>
-
-            {/* Descripción */}
-            <Typography variant="h6" className="font-semibold mb-2">
-              Descripción
-            </Typography>
-            <Typography variant="body1" className="text-gray-600 mb-6">
-              {property.description}
-            </Typography>
-
-            {/* Amenidades */}
-            <Typography variant="h6" className="font-semibold mb-3">
-              Amenidades
-            </Typography>
-            <Box className="flex flex-wrap gap-2 mb-6">
-              {property.amenities.map((amenity, index) => (
-                <Chip
-                  key={index}
-                  label={amenity}
-                  className="bg-primary-main text-gray-50"
-                />
-              ))}
-            </Box>
+          <Typography variant="h4" gutterBottom>
+            {property.title}
+          </Typography>
+          <Typography variant="h5" color="primary" gutterBottom>
+            ${property.price.toLocaleString()}/mes
+          </Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+            <LocationOn sx={{ mr: 1 }} />
+            <Typography>{property.location}</Typography>
           </Box>
+          <Typography variant="body1" paragraph>
+            {property.description}
+          </Typography>
+          <ImageGallery images={property.images} />
         </Grid>
 
-        {/* Sidebar - Contacto */}
         <Grid item xs={12} md={4}>
-          <Card className="sticky top-4">
+          <Card>
             <CardContent>
-              <Typography variant="h6" className="font-semibold mb-4">
-                ¿Te interesa esta propiedad?
+              <Typography variant="h6" gutterBottom>
+                Detalles
               </Typography>
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                <BedroomParentOutlined sx={{ mr: 1 }} />
+                <Typography>{property.bedrooms} habitaciones</Typography>
+              </Box>
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                <BathtubOutlined sx={{ mr: 1 }} />
+                <Typography>{property.bathrooms} baños</Typography>
+              </Box>
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                <SquareFootOutlined sx={{ mr: 1 }} />
+                <Typography>{property.area} m²</Typography>
+              </Box>
               <Button
                 variant="contained"
                 color="primary"
                 fullWidth
-                size="large"
-                className="mb-4"
+                startIcon={<ChatIcon />}
+                onClick={handleContactOwner}
+                disabled={!property.isAvailable}
               >
-                Contactar al Propietario
+                {property.isAvailable ? 'Contactar al propietario' : 'No disponible'}
               </Button>
-              <Typography variant="body2" color="text.secondary" className="text-center">
-                El propietario responderá a tu mensaje lo antes posible
-              </Typography>
             </CardContent>
           </Card>
         </Grid>
+
+        <Grid item xs={12}>
+          <Typography variant="h6" gutterBottom>
+            Amenidades
+          </Typography>
+          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+            {property.amenities.map((amenity: string, index: number) => (
+              <Chip key={index} label={amenity} />
+            ))}
+          </Box>
+        </Grid>
+
+        <Grid item xs={12}>
+          <ReviewSection propertyId={property.id} />
+        </Grid>
       </Grid>
+
+      <Dialog
+        open={chatOpen}
+        onClose={() => setChatOpen(false)}
+        maxWidth="md"
+        fullWidth
+        PaperProps={{
+          sx: { height: '80vh' }
+        }}
+      >
+        {property && (
+          <Chat
+            propertyId={property.id}
+            currentUserId={currentUserId}
+            otherUserId={property.ownerId}
+          />
+        )}
+      </Dialog>
+
+      <AuthRequiredDialog
+        open={authDialogOpen}
+        onClose={() => setAuthDialogOpen(false)}
+      />
     </Container>
   );
-}; 
+};
+
+export { PropertyDetails }; 
